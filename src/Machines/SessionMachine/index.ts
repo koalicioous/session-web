@@ -8,65 +8,12 @@ import {
 } from 'xstate'
 import TimerMachine from '../TimerMachine'
 import { TimerEventStart, TimerMachineContext, TimerMachineEvent, TimerMachineEventType } from '../TimerMachine/types'
-
-export type WithStartAndEndDate = {
-    startDate: Date
-    endDate: Date
-}
-
-export type Session = {
-    type: "session" | "rest",
-    title: string
-    note: string
-    projectId: string
-    pauses: WithStartAndEndDate[],
-} & WithStartAndEndDate;
-
-export type SessionMachineContext = {
-    timerRef?: ActorRefWithDeprecatedState<
-        TimerMachineContext,
-        TimerMachineEvent,
-        any,
-        any
-    >
-    sessions: Session[]
-    startDate: Date
-    pauseDate: Date
-    pauses: WithStartAndEndDate[]
-    title: string
-}
-
-type SessionMachineEvent =
-  | {
-      type: "INIT_FOCUS";
-      second: number;
-      startDate: Date;
-    }
-  | {
-      type: "BREATHE_END";
-    }
-  | {
-      type: "TIMER_END";
-    }
-  | { type: "OVERFLOW_REVERSED" }
-  | {
-      type: "STOP_WORKING";
-    }
-  | {
-      type: "COMPLETE_TASK";
-    }
-  | { type: "PAUSE" }
-  | { type: "UNPAUSE" }
-  | { type: "INCREMENT"; second: number }
-  | { type: "DECREMENT"; second: number }
-  | { type: "ABANDON_SESSION" }
-  | { type: "OVERRIDE_STATE"; state: Partial<SessionMachineContext> }
-  | ({
-      type: "RECORD_PAUSE";
-      nextTarget?: "idle" | "rest";
-    } & WithStartAndEndDate)
-  | { type: "TAKE_A_BREAK"; second: number };
-
+import {
+    SessionMachineContext,
+    SessionMachineEvent,
+    SessionMachineStates,
+    SessionEventPause
+} from './types'
 
 const sessionMachineInitialState: SessionMachineContext = {
     timerRef: undefined,
@@ -77,15 +24,6 @@ const sessionMachineInitialState: SessionMachineContext = {
     sessions: []
 }
 
-export enum SessionMachineEventType {
-    PAUSE = "PAUSE",
-}
-
-export type SessionEventPause = {
-    type: SessionMachineEventType.PAUSE
-    startDate: Date
-    endDate: Date
-}
 
 const appendPauses = assign<
     SessionMachineContext,
@@ -144,6 +82,14 @@ const resetTimerActions = [
 const SessionMachine = createMachine<
     SessionMachineContext,
     SessionMachineEvent
->({},{})
+>({
+    predictableActionArguments: true,
+    id: "session",
+    initial: SessionMachineStates.IDLE,
+    context: sessionMachineInitialState,
+    states: {
+        [SessionMachineStates.IDLE]: {}
+    }
+},{})
 
 export default SessionMachine;
