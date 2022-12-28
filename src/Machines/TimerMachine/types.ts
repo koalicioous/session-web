@@ -48,5 +48,6 @@ export enum TimerMachineStates {
     IDLE = "IDLE",
     RUNNING = "RUNNING",
     OVERFLOWED = "OVERFLOWED",
-    PAUSED = "PAUSED"
+    PAUSED = "PAUSED",
+    REST = "REST"
 }
