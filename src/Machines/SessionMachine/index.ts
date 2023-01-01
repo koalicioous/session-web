@@ -130,7 +130,8 @@ const SessionMachine = createMachine<
           src: (ctx, ev) => (cb) => {
             let timeout = setTimeout(() => {
               cb(SessionMachineEventType.BREATHE_END);
-            }, 5000);
+              // Reset to default later: 5000
+            }, 1000);
             return () => clearTimeout(timeout);
           },
         },

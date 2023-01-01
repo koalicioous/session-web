@@ -9,12 +9,13 @@ import {
   TimerMachineContext,
   TimerMachineEvent,
   TimerMachineStates,
+  TimerMachineEventType,
 } from "../Machines/TimerMachine/types";
 import {
   SessionMachineEventType,
   SessionMachineStates,
 } from "../Machines/SessionMachine/types";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const splitSecondToHourMinuteAndSecond = (
   totalSecond: number
@@ -60,6 +61,8 @@ type TTimerViewProps = {
   >;
 };
 
+type TUpdateTimeViewProps = TTimerViewProps;
+
 const TimerView = ({ timerActor }: TTimerViewProps) => {
   const [timerCurrent] = useActor(timerActor);
   return (
@@ -89,10 +92,55 @@ const TimerView = ({ timerActor }: TTimerViewProps) => {
   );
 };
 
+const UpdateTimeView = ({ timerActor }: TUpdateTimeViewProps) => {
+  const [newStartDate, setNewStartDate] = useState(0);
+  // const [current, send] = useMachine(SessionMachine);
+  const [timerCurrent, send] = useActor(timerActor);
+
+  const maxSelectedTime = useMemo(() => {
+    if (!timerCurrent.context.secondRemaining) return "23:59";
+    return `${new Date().getHours()}:${new Date().getMinutes() - 1}`;
+  }, [timerCurrent.context.secondRemaining]);
+
+  return (
+    <div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send({
+            type: TimerMachineEventType.OVERRIDE_STATE,
+            state: {
+              startDate: new Date(newStartDate),
+            },
+          });
+        }}
+      >
+        <div>
+          <label>Started at:</label>
+          <input
+            type="time"
+            onChange={(e) => {
+              const [hour, minute] = String(e.target.value).split(":");
+              const startDate = new Date().setHours(
+                Number(hour),
+                Number(minute)
+              );
+              setNewStartDate(startDate);
+            }}
+            max={maxSelectedTime}
+          />
+        </div>
+        <div>
+          <button type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 export default function Home() {
   const [current, send] = useMachine(SessionMachine);
   const [duration, setDuration] = useState(0);
-  const [newStartDate, setNewStartDate] = useState(0);
   return (
     <>
       <Head>
@@ -102,7 +150,14 @@ export default function Home() {
         <div>
           <h1>State: {current.toStrings()}</h1>
           {current.context.timerRef && (
-            <TimerView timerActor={current.context.timerRef} />
+            <>
+              <TimerView timerActor={current.context.timerRef} />
+              {(current.matches(SessionMachineStates.SESSION) ||
+                current.matches(SessionMachineStates.SESSION_END) ||
+                current.matches(SessionMachineStates.SESSION_PAUSED)) && (
+                <UpdateTimeView timerActor={current.context.timerRef} />
+              )}
+            </>
           )}
           {current.matches(SessionMachineStates.IDLE) && (
             <div>
@@ -121,7 +176,7 @@ export default function Home() {
                 />
               </div>
               <div>{convertSecondToClockString(duration)}</div>
-              <button
+              {/* <button
                 onClick={() => {
                   send(SessionMachineEventType.INIT_FOCUS, {
                     second: duration,
@@ -129,7 +184,7 @@ export default function Home() {
                 }}
               >
                 Start Session
-              </button>
+              </button> */}
             </div>
           )}
           {current.matches(SessionMachineStates.BREATHE) && (
@@ -148,39 +203,6 @@ export default function Home() {
             current.matches(SessionMachineStates.SESSION_END) ||
             current.matches(SessionMachineStates.SESSION_PAUSED)) && (
             <div>
-              <div>
-                <label>Started at:</label>
-                <input
-                  type="time"
-                  onChange={(e) => {
-                    const [hour, minute] = String(e.target.value).split(":");
-                    const startDate = new Date().setHours(
-                      Number(hour),
-                      Number(minute),
-                      0,
-                      0
-                    );
-                    setNewStartDate(startDate);
-                  }}
-                  min="21:00:00"
-                />
-              </div>
-              <div>
-                <button
-                  onClick={() => {
-                    // Work on the line below
-                    // console.log(newStartDate);
-                    // send({
-                    //   type: "OVERRIDE_STATE",
-                    //   state: {
-                    //     startDate: newStartDate
-                    //   }
-                    // });
-                  }}
-                >
-                  Submit
-                </button>
-              </div>
               <div>
                 {current.matches(SessionMachineStates.SESSION_PAUSED) ? (
                   <button onClick={() => send(SessionMachineEventType.UNPAUSE)}>
